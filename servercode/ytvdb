@@ -1,0 +1,68 @@
+db name:ytv
+
+table in ytv db:
+
++----------------+
+| Tables_in_ytv  |
++----------------+
+| createuser     |
+| networkstatus  |
+| recentuserinfo |
+| streamstatus   |
+| userdetails    |
+| userinfo       |
++----------------+
+
+
+createuser 
+==========
+CREATE TABLE `createuser` (
+  `username` varchar(30) NOT NULL DEFAULT '',
+  `email` varchar(30) DEFAULT NULL,
+  `city` varchar(30) DEFAULT NULL,
+  `password` varchar(30) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `imei` varchar(30) DEFAULT NULL,
+  PRIMARY KEY (`username`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+
+ 
+networkstatus 
+===============
+CREATE TABLE `networkstatus` (
+  `imei` varchar(30) NOT NULL,
+  `datetime` varchar(50) DEFAULT NULL,
+  `InternetActiveStatus` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`imei`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+
+recentuserinfo 
+==============
+ CREATE TABLE `recentuserinfo` (
+  `imei` varchar(30) NOT NULL,
+  `datetime` varchar(50) NOT NULL,
+  `activestatus` varchar(10) DEFAULT NULL,
+  `InternetSpeed` varchar(20) DEFAULT NULL,
+  `StreamStatus` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`imei`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+
+userinfo
+=========
+
+CREATE TABLE `userinfo` (
+  `name` varchar(20) DEFAULT NULL,
+  `datetime` varchar(50) DEFAULT NULL,
+  `imei` varchar(50) DEFAULT NULL,
+  `activityStatus` varchar(20) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+
+userdetails 
+===========
+ CREATE TABLE `userdetails` (
+  `name` varchar(30) DEFAULT NULL,
+  `mobilenumber` varchar(30) DEFAULT NULL,
+  `town` varchar(30) DEFAULT NULL,
+  `country` varchar(30) DEFAULT NULL,
+  `imei` varchar(30) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1

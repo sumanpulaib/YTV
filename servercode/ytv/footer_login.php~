@@ -1,0 +1,11 @@
+<?php
+}else{
+?>
+<script>
+location.replace("http://183.82.9.60/ytv/login.php?login_fail=faild");
+</script>
+<?php
+//header('Location: http://183.82.9.60/ytv/login.php?login_fail=faild');
+//exit;
+}
+?>

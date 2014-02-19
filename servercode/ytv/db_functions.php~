@@ -1,0 +1,247 @@
+<?php 
+class DB_Functions {
+    private $passwordSeed = "MobileReporter24Feb2013";
+ 
+    private $db;
+ 
+    //put your code here
+    // constructor
+    function __construct() {
+        include_once './db_connect.php';
+        // connecting to database
+        $this->db = new DB_Connect();
+        $this->db->connect();
+    }
+ 
+    // destructor
+    function __destruct() {
+ 
+    }
+
+    
+   
+    
+    public function checkForUserName($username) {
+       $result = mysql_query("SELECT COUNT(*) FROM Users WHERE Username='$username'");
+       $returned = mysql_fetch_array($result);
+       if ($returned[0] == 0) {
+           return false;
+       }
+       else {
+           return true;
+       }
+    }
+
+    public function checkForUserEmail($email) {
+       $result = mysql_query("SELECT COUNT(*) FROM Users WHERE Email='$email'");
+       $returned = mysql_fetch_array($result);
+       if ($returned[0] == 0) {
+           return false;
+       }
+       else {
+           return true;
+       }
+    }
+
+
+
+ 
+    /**
+     * Storing new user
+     * returns id number of the newly created user or -1 if creation not possible
+     */
+    public function createUser($username, $fullname, $email, $password) {
+        // insert user into database
+        $result = mysql_query("INSERT INTO Users(username, fullname, email, encrypted_password, gcm_regid, userCreatedAt) VALUES('$username', '$fullname', '$email', AES_ENCRYPT('$password',CONCAT('$email','$this->passwordSeed')), '', NOW())");
+        // check for successful store
+        if ($result) {
+           return true;
+        } 
+        else {
+           return false;
+        }
+    }
+
+    public function isAuthorized($email) {
+       $result = mysql_query("SELECT Authorized FROM Users where email='$email'");
+       $returned = mysql_fetch_array($result);
+       if ($returned[0] == "1") {
+          return true;
+       }
+       else {
+          return false;
+       }
+    }
+
+
+    private function decryptPassword($email,$password) {
+	$result = mysql_query("SELECT AES_DECRYPT(encrypted_password,CONCAT('$email','$this->passwordSeed')) FROM Users WHERE email='$email'");
+        $returned = mysql_fetch_array($result);
+        return $returned[0]; 
+    }
+
+
+    public function validateUser($username,$password) {
+        $result = mysql_query("SELECT username, email FROM createuser where username='$username'");
+        $returned = mysql_fetch_array($result);
+        if ($username == $returned[0]) {
+            $email = $returned[1];
+            echo "Success";
+        }
+        else {
+            echo "Login Failed";
+        } 
+    }
+
+
+    public function BooleanResultValidateUser($username,$password) {
+        $result = mysql_query("SELECT Email FROM Users where username='$username'");
+        if ($result) {
+            $returned = mysql_fetch_array($result);
+            $email = $returned[0];
+            $decryptedPassword = $this->decryptPassword($email,$password);
+            if ($decryptedPassword == $password) {
+                return true;
+            }
+            else {
+                return false;
+           }
+        }
+    }
+
+
+    public function updatePassword($username, $oldpassword, $newpassword) {
+        $userExists = $this->checkForUserName($username);
+        if ($userExists) {
+            $result = $this->BooleanResultValidateUser($username, $oldpassword);
+            if ($result) {
+                $result = mysql_query("SELECT Email FROM Users where username='$username'");
+                $returned = mysql_fetch_array($result);
+                $email = $returned[0];
+                
+                $result = mysql_query("UPDATE Users SET encrypted_password=AES_ENCRYPT('$newpassword',CONCAT('$email','$this->passwordSeed')) WHERE Email='$email'");
+                if ($result) {
+                    return json_encode(array('Result' => 'AOK', 'Reason' => ''));
+                }
+                else {
+                    return json_encode(array('Result' => 'NOK', 'Reason' => 'Unknown Reason'));
+                }
+            }
+            else {
+                return json_encode(array('Result' => 'NOK', 'Reason' => 'Bad user credentials'));
+            }
+        }
+        else {
+            return json_encode(array('Result' => 'NOK', 'Reason' => 'User does not exists'));
+        }
+    }
+
+        
+    public function resendPassword($username) {
+        $userExists = $this->checkForUserName($username);
+        if ($userExists) {
+            $result = mysql_query("INSERT INTO ResendPassword VALUES('$username') ON DUPLICATE KEY UPDATE Username='$username'");   
+            if ($result) {
+                return true;
+            }
+        }
+        else {
+            return json_encode(array('Result' => 'NOK', 'Reason' => 'User does not exists'));
+        }
+    } 
+
+
+
+    public function updatePosition($username, $password, $dateTime, $latitude, $longitude, $heading, $speed) {
+        if ($this->validateUser($username,$password)) {
+            if ($speed == 0.0) {
+              $heading = -1.0;
+            }
+            $result = mysql_query("UPDATE Users SET lastUpdatedAt='$dateTime', latitude=$latitude, longitude=$longitude, speed=$speed, heading=$heading WHERE username='$username'");
+            if ($result) {
+                $result = mysql_query("INSERT INTO UserLocationHistory(Username,DateTimeSTamp,Latitude,Longitude,Speed,Heading) VALUES('$username','$dateTime',$latitude,$longitude,$speed,$heading)");
+                if ($result) {
+                    return json_encode(array('Result' => 'OK', 'Reason' => ''));
+                }
+                else {
+                    return json_encode(array('Result' => 'NOK', 'Reason' => 'Unknown Reason - UserLocationHistory'));
+                }
+            }
+            else {
+                return json_encode(array('Result' => 'NOK', 'Reason' => 'Unknown Reason - Users'));
+            }
+        }
+        else {
+            return json_encode(array('Result' => 'NOK', 'Reason' => 'Bad credentials'));
+        }
+    }
+
+    
+
+
+
+    public function register($username, $password, $regId) {
+        if ($this->validateUser($username,$password)) {
+           $result = mysql_query("update Users set gcm_regid='$regId',active=1 where username='$username'");
+           if ($result) {
+              return json_encode(array('Result' => 'AOK', 'Reason' => ''));
+           }
+           else {
+              return json_encode(array('Result' => 'NOK', 'Reason' => 'Unable to update user'));
+           }
+        }
+        else {
+           return json_encode(array('Result' => 'NOK', 'Reason' => 'Bad credentials'));
+        }
+    }
+ 
+ 
+    public function unregister($username, $password) {
+        if ($this->validateUser($username,$password)) {
+           $result = mysql_query("update Users set gcm_regid='',active=0, latitude=-999.9, longitude=-999.9, speed=0.0, heading=-1.0 where username='$username'");
+           if ($result) {
+              return json_encode(array('Result' => 'AOK', 'Reason' => ''));
+           }
+           else {
+              return json_encode(array('Result' => 'NOK', 'Reason' => 'Unable to update user'));
+           }
+        }
+        else {
+           return json_encode(array('Result' => 'NOK', 'Reason' => 'Bad credentials'));
+        }
+    }
+
+
+    public function deregister($reg) {
+        $result = mysql_query("Update Users set gcm_regid='',active=0, latitude=-999.9, longitude=-999.9, speed=0.0, heading=-1.0 WHERE gcm_reg_id=''");
+        return result;
+    }
+
+
+
+    public function getAllContactsForUser($username) {
+        
+        $response_array = Array();
+        $result = mysql_query("SELECT FriendUsername FROM FriendList WHERE Username='$username' ORDER BY FriendUsername");
+        while($row = mysql_fetch_array($result)){
+            $result2 = mysql_query("SELECT Fullname, Email FROM Users WHERE Username='$row[0]'");
+            $row2 = mysql_fetch_array($result2);
+            $row_array['Username'] = $row[0];
+            $row_array['Fullname'] = $row2[0];
+            $row_array['Email'] = $row2[1];
+            array_push($response_array,$row_array);            
+        }
+        echo json_encode($response_array);
+     }
+
+
+     
+     public function getAllUsers() { 
+        $result = mysql_query("select username, email, gcm_regid FROM Users Where gcm_regid <> ''"); 
+        return $result; 
+    }
+
+	
+
+}
+?>
